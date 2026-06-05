@@ -1,6 +1,6 @@
 {
-  "name": "Workout Tracker for dickheads",
-  "short_name": "Dickhead Workouts",
+  "name": "Workout Tracker",
+  "short_name": "Workouts",
   "description": "Track gym, calisthenics, running and cycling sessions",
   "start_url": "/workout/",
   "scope": "/workout/",

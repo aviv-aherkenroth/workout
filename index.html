@@ -289,7 +289,6 @@
           </optgroup>
           <optgroup label="Calisthenics">
             <option>Pull-up</option>
-            <option>Australian pull-up</option>
             <option>Chin-up</option>
             <option>Dip</option>
             <option>Push-up</option>
@@ -810,9 +809,19 @@ addSet();
 const d = new Date();
 document.getElementById('log-date').textContent = d.toLocaleDateString('en-GB', { weekday: 'long', month: 'short', day: 'numeric' });
 
+// iOS home screen launch URL fix
+// When added to home screen, iOS sometimes drops the path and loads the root.
+// This detects that and redirects back to the correct URL.
+(function() {
+  const correct = '/workout/';
+  if (window.navigator.standalone && window.location.pathname === '/') {
+    window.location.replace(correct);
+  }
+})();
+
 // PWA service worker
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(() => {});
+  navigator.serviceWorker.register('/workout/sw.js').catch(() => {});
 }
 </script>
 </body>
