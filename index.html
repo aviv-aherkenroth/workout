@@ -6,6 +6,7 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Workouts">
+<meta name="apple-touch-startup-image" content="icon-512.png">
 <meta name="theme-color" content="#111111">
 <link rel="manifest" href="manifest.json">
 <link rel="apple-touch-icon" href="icon-192.png">
@@ -422,6 +423,35 @@
     </div>
   </div>
 
+  <!-- SETTINGS SCREEN -->
+  <div id="screen-settings" class="screen">
+    <div class="header"><h2>Settings</h2></div>
+
+    <div class="card">
+      <div class="section-title">Data &amp; backup</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.6">Export saves all your workouts as a JSON file. Keep it in iCloud or Google Drive as a backup, or use it to transfer to a new device.</p>
+      <button class="btn-primary" onclick="exportData()">
+        <i class="ti ti-download"></i> Export my data
+      </button>
+      <button class="btn-ghost" onclick="document.getElementById('import-input').click()">
+        <i class="ti ti-upload"></i> Import from file
+      </button>
+      <input type="file" id="import-input" accept=".json" style="display:none" onchange="importData(this)">
+    </div>
+
+    <div class="card" style="margin-top:0.5rem">
+      <div class="section-title">Danger zone</div>
+      <p style="font-size:13px;color:var(--text2);margin-bottom:1rem;line-height:1.6">This permanently deletes all your workout history. Export first if you want a backup.</p>
+      <button onclick="clearAllData()" style="width:100%;padding:12px;background:none;color:#c0392b;border:0.5px solid #c0392b;border-radius:var(--radius);font-size:15px;font-weight:500;cursor:pointer;">
+        <i class="ti ti-trash"></i> Delete all data
+      </button>
+    </div>
+
+    <div style="text-align:center;margin-top:2rem;font-size:12px;color:var(--text3)">
+      All data is stored locally on this device only.<br>Nothing is ever sent to a server.
+    </div>
+  </div>
+
   <nav>
     <button class="active" onclick="showScreen('log',this)" aria-label="Log">
       <i class="ti ti-plus-circle"></i>Log
@@ -431,6 +461,9 @@
     </button>
     <button onclick="showScreen('progress',this)" aria-label="Progress">
       <i class="ti ti-chart-bar"></i>Progress
+    </button>
+    <button onclick="showScreen('settings',this)" aria-label="Settings">
+      <i class="ti ti-settings"></i>Settings
     </button>
   </nav>
 </div>
@@ -471,6 +504,7 @@ function showScreen(id, btn) {
   btn.classList.add('active');
   if (id === 'history') renderHistory();
   if (id === 'progress') renderProgress();
+  if (id === 'settings') renderSettings();
 }
 
 // Type switcher
@@ -716,6 +750,56 @@ function renderProgress() {
   document.getElementById('pr-list').innerHTML = prEntries.length
     ? prEntries.map(([name, kg]) => `<div class="pr-row"><span>${name}</span><span class="pr-val">${kg} kg</span></div>`).join('')
     : '<p style="font-size:13px;color:var(--text2);padding:4px 0">Log strength sessions to see your PRs</p>';
+}
+
+// Settings
+function renderSettings() {}
+
+// Export
+function exportData() {
+  if (!sessions.length) { showToast('No data to export yet'); return; }
+  const payload = JSON.stringify({ version: 1, exportedAt: new Date().toISOString(), sessions }, null, 2);
+  const blob = new Blob([payload], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  const date = new Date().toISOString().slice(0, 10);
+  a.href = url; a.download = `workouts-${date}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Exported ' + sessions.length + ' sessions');
+}
+
+// Import
+function importData(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      const imported = data.sessions || (Array.isArray(data) ? data : null);
+      if (!imported) { showToast('Invalid file format'); return; }
+      if (!confirm(`Import ${imported.length} sessions? This will merge with your existing data.`)) return;
+      const existing = new Set(sessions.map(s => s.date));
+      const newOnes = imported.filter(s => !existing.has(s.date));
+      sessions = [...sessions, ...newOnes].sort((a, b) => new Date(b.date) - new Date(a.date));
+      saveData();
+      showToast(`Imported ${newOnes.length} new sessions`);
+    } catch(err) {
+      showToast('Could not read file');
+    }
+  };
+  reader.readAsText(file);
+  input.value = '';
+}
+
+// Clear
+function clearAllData() {
+  if (!sessions.length) { showToast('Nothing to delete'); return; }
+  if (!confirm(`Delete all ${sessions.length} sessions? This cannot be undone.`)) return;
+  sessions = [];
+  saveData();
+  showToast('All data deleted');
 }
 
 // Init
